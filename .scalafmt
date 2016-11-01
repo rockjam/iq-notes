@@ -1,3 +1,15 @@
---style defaultWithAlign
---spacesInImportCurlyBraces true
---danglingParentheses true
+style: defaultWithAlign
+maxColumn: 100
+continuationIndent.callSite: 2
+danglingParentheses: true
+align.openParenCallSite: false
+spaces {
+  inImportCurlyBraces: true
+}
+
+rewriteTokens {
+  "->": "→"
+  "=>": "⇒"
+}
+
+rewrite.rules = [SortImports, RedundantBraces, PreferCurlyFors]
