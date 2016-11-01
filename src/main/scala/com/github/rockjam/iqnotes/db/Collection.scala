@@ -16,25 +16,15 @@
 
 package com.github.rockjam.iqnotes.db
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
-import com.github.rockjam.iqnotes.models.AccessToken
-import reactivemongo.bson.{ BSONDocumentWriter, Macros }
+import reactivemongo.api.collections.bson.BSONCollection
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
-final class AccessTokensRepo(implicit system: ActorSystem) {
-
+abstract class Collection(name: String)(implicit system: ActorSystem) {
   private val mongoExt = MongoExtension(system)
-  import mongoExt.executor
 
-  private def accessTokens = mongoExt.collection("access_tokens")
+  protected implicit val ec: ExecutionContext = mongoExt.executor
 
-  implicit val atw: BSONDocumentWriter[AccessToken] = Macros.writer[AccessToken]
-
-  def generateAccessTokens()(implicit system: ActorSystem): Future[AccessToken] = {
-    val token = AccessToken(UUID.randomUUID().toString)
-    accessTokens.flatMap(_.insert(token)) map (_ ⇒ token)
-  }
+  protected val collection: Future[BSONCollection] = mongoExt.collection(name)
 }

@@ -17,12 +17,39 @@
 package com.github.rockjam.iqnotes
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.stream.ActorMaterializer
+import akka.http.scaladsl.server.Directives._
 import com.github.rockjam.iqnotes.http.{ AuthHandler, HttpConfig, NotesHandler }
-import spray.routing.SimpleRoutingApp
 
-object Main extends SimpleRoutingApp with App {
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
+object Main extends App {
 
   implicit val system = ActorSystem("iq-notes")
+  implicit val mat    = ActorMaterializer()
+
+  import system.dispatcher
+
+//  implicit def myRejectionHandler =
+//    RejectionHandler.newBuilder()
+//      .handle { case MissingCookieRejection(cookieName) =>
+//        complete(HttpResponse(BadRequest, entity = "No cookies, no service!!!"))
+//      }
+//      .handle { case AuthorizationFailedRejection =>
+//        complete((Forbidden, "You're out of your depth!"))
+//      }
+//      .handle { case ValidationRejection(msg, _) =>
+//        complete((InternalServerError, "That wasn't valid! " + msg))
+//      }
+//      .handleAll[MethodRejection] { methodRejections =>
+//      val names = methodRejections.map(_.supported.name)
+//      complete((MethodNotAllowed, s"Can't do that! Supported: ${names mkString " or "}!"))
+//    }
+//      .handleNotFound { complete((NotFound, "Not here!")) }
+//      .result()
+//
 
   private val routes = pathPrefix("api") {
     (new AuthHandler).routes ~ (new NotesHandler).routes
@@ -34,5 +61,5 @@ object Main extends SimpleRoutingApp with App {
       .getOrElse(throw new RuntimeException(
         "Failed to get http config. Make sure you provided interface and port"))
 
-  startServer(config.interface, config.port)(routes)
+  Http().bindAndHandle(routes, config.interface, config.port)
 }

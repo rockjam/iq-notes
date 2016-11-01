@@ -16,23 +16,25 @@
 
 package com.github.rockjam.iqnotes.models
 
+case class NoteDataRequest(title: Option[String], body: Option[String])
+
+case class UserRegisterRequest(username: String, password: String)
+
+case class AuthorizeRequest(username: String, password: String)
+
 case class Note(_id: String, title: String, body: String)
 
 case class NoteId(_id: String)
 
 case class User(username: String, passwordHash: String)
 
-// RequestRegister
-case class RegisterUser(username: String, password: String)
-
-// AuthRequest
-case class AuthCredentials(username: String, password: String)
-
 case class AccessToken(accessToken: String) // no ready serializer for UUID
 
 case class HttpError(error: String, message: String)
 
 object HttpErrors {
-  val AuthError  = HttpError("AUTH_ERROR", "User or password wrong")
-  val BadRequest = HttpError("BAD_REQUEST", "Parameter not found")
+  val AuthError    = HttpError("AUTH_ERROR", "User or password wrong")
+  val BadRequest   = HttpError("BAD_REQUEST", "Parameter not found")
+  val SameUsername = HttpError("SAME_USERNAME", "User with this username already exists")
+  val NoteNotFound = HttpError("NOTE_NOT_FOUND", "Note not found")
 }

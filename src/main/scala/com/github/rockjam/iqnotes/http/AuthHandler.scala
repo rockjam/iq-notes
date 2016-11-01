@@ -17,14 +17,16 @@
 package com.github.rockjam.iqnotes.http
 
 import akka.actor.ActorSystem
-import com.github.rockjam.iqnotes.db.{ AccessTokensRepo, UsersRepo }
+import akka.http.scaladsl.model.StatusCodes.Created
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, StatusCode, StatusCodes }
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorMaterializer
+import com.github.rockjam.iqnotes.db.{ AccessTokensCollection, UsersCollection }
 import com.github.rockjam.iqnotes.models._
 import com.github.rockjam.iqnotes.utils.SecurityUtils
-import org.json4s.{ DefaultFormats, Formats }
-import spray.http.{ HttpEntity, StatusCode, StatusCodes }
-import spray.routing.Route
-import spray.routing.Directives._
-import spray.httpx.Json4sSupport
+import de.heikoseeberger.akkahttpjson4s.Json4sSupport
+import org.json4s.{ native, DefaultFormats }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -32,38 +34,29 @@ import scala.util.{ Failure, Success }
 // TODO: rename to AuthHttp
 final class AuthHandler(implicit system: ActorSystem) extends HttpRoutes with Json4sSupport {
 
-  implicit def json4sFormats: Formats = DefaultFormats
-
   import system.dispatcher
+
+  implicit val serialization = native.Serialization
+  implicit val formats       = DefaultFormats
 
   // format: off
   def routes: Route =
     path("login") {
       post {
-        entity(as[AuthCredentials]) { auth ⇒
-          onComplete(validateAuth(auth)) {
-            case Success(Right(res)) ⇒
-              complete(res)
-            case Success(Left((code, error))) ⇒
-              complete(code → error)
-            case Failure(err) ⇒
-              system.log.error(err, "Failed to execute find user request")
-              complete(StatusCodes.InternalServerError)
+        entity(as[AuthorizeRequest]) { auth ⇒
+          onSuccess(validateAuth(auth)) {
+            case Right(res) ⇒ complete(res)
+            case Left(err) ⇒ complete(err)
           }
         }
       }
     } ~
     path("register") {
       post {
-        entity(as[RegisterUser]) { reg ⇒
-          onComplete(register(reg)) {
-            case Success(Right(res)) ⇒
-              complete(StatusCodes.Created → HttpEntity.Empty)
-            case Success(Left((code, error))) ⇒
-              complete(code → error)
-            case Failure(err) ⇒
-              system.log.error(err, "Failed to create user")
-              complete(StatusCodes.InternalServerError)
+        entity(as[UserRegisterRequest]) { reg ⇒
+          onSuccess(register(reg)) {
+            case Right(res) ⇒ complete(Created → None)
+            case Left(err) ⇒ complete(err)
           }
         }
       }
@@ -71,22 +64,23 @@ final class AuthHandler(implicit system: ActorSystem) extends HttpRoutes with Js
   // format: on
 
   // TODO: maybe move to trait AuthHandlers
-  private val users  = new UsersRepo
-  private val tokens = new AccessTokensRepo
+  private val users  = new UsersCollection
+  private val tokens = new AccessTokensCollection
 
+  // TODO: implement logout with token deletion
   private def logout(): Future[Unit] = ???
 
-  private def register(reg: RegisterUser): Future[(StatusCode, HttpError) Either Unit] = {
-    val user = User(reg.username, SecurityUtils.passwordHash(reg.password))
+  private def register(reg: UserRegisterRequest): Future[(StatusCode, HttpError) Either Unit] =
     for {
-      _ <- users.create(user)
-    } yield Right(())
-  }
+      exists <- users.exists(reg.username)
+      user = User(reg.username, SecurityUtils.passwordHash(reg.password))
+      result <- if (exists) sameUsernameError else users.create(user) map Right.apply
+    } yield result
 
   private def validateAuth(
-      auth: AuthCredentials): Future[(StatusCode, HttpError) Either AccessToken] =
+      auth: AuthorizeRequest): Future[(StatusCode, HttpError) Either AccessToken] =
     for {
-      user <- users.findUser(auth.username)
+      user <- users.find(auth.username)
       _ = println(s"=======user: ${user}")
       result <- user.fold(authError) { user ⇒
         if (SecurityUtils.isValidPassword(auth.password, user.passwordHash))
@@ -95,6 +89,9 @@ final class AuthHandler(implicit system: ActorSystem) extends HttpRoutes with Js
           authError
       }
     } yield result
+
+  private val sameUsernameError =
+    Future.successful(Left(StatusCodes.BadRequest → HttpErrors.SameUsername))
 
   private val authError: Future[(StatusCode, HttpError) Either AccessToken] =
     Future.successful(Left(StatusCodes.Forbidden → HttpErrors.AuthError))

@@ -14,10 +14,26 @@
  * limitations under the License.
  */
 
-package com.github.rockjam.iqnotes.http
+package com.github.rockjam.iqnotes
 
-import akka.http.scaladsl.server.Route
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest._
 
-trait HttpRoutes {
-  def routes: Route
+import scala.concurrent.Future
+
+class SampleTest extends FlatSpecLike with Matchers with ScalaFutures {
+
+  behavior of "stone"
+
+  it should "lay on ground forever" in layForever
+
+  it should "lay on ground in future" in layInFuture
+
+  def layForever(): Unit =
+    println("Stone lays on the ground")
+
+  def layInFuture(): Unit = {
+    val asyncLayForver = Future.successful(true).futureValue
+    asyncLayForver shouldEqual true
+  }
 }

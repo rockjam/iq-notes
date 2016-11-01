@@ -22,21 +22,18 @@ import reactivemongo.bson.{ BSONDocument, BSONDocumentReader, BSONDocumentWriter
 
 import scala.concurrent.Future
 
-final class UsersRepo(implicit system: ActorSystem) {
-
-  private val mongoExt = MongoExtension(system)
-  import mongoExt.executor
-
-  private def users = mongoExt.collection("users")
+final class UsersCollection(implicit system: ActorSystem) extends Collection("users")(system) {
 
   private implicit val uw: BSONDocumentWriter[User] = Macros.writer[User]
   private implicit val ur: BSONDocumentReader[User] = Macros.reader[User]
 
-  def findUser(username: String): Future[Option[User]] =
-    users.flatMap(_.find(BSONDocument("username" → username)).one[User])
+  def find(username: String): Future[Option[User]] =
+    collection.flatMap(_.find(BSONDocument("username" → username)).one[User])
 
-  // TODO: make sure username is unique
+  def exists(username: String): Future[Boolean] =
+    find(username) map (_.isDefined)
+
   def create(user: User): Future[Unit] =
-    users.flatMap(_.insert(user)) map (_ ⇒ ())
+    collection.flatMap(_.insert(user)) map (_ ⇒ ())
 
 }
