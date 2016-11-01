@@ -17,7 +17,7 @@
 package com.github.rockjam.iqnotes.db
 
 import akka.actor.ActorSystem
-import com.github.rockjam.iqnotes.models.Note
+import com.github.rockjam.iqnotes.models.{ Note, NoteId }
 import reactivemongo.bson.{
   BSONDocument,
   BSONDocumentReader,
@@ -41,9 +41,9 @@ final class NotesCollection(implicit system: ActorSystem) extends Collection("no
   def find(id: String): Future[Option[Note]] =
     collection.flatMap(_.find(BSONDocument("_id" → id)).one[Note])
 
-  def create(title: String, body: String): Future[String] = {
+  def create(title: String, body: String): Future[NoteId] = {
     val id = BSONObjectID.generate().stringify
-    collection.flatMap(_.insert(Note(id, title, body))) map (_ ⇒ id)
+    collection.flatMap(_.insert(Note(id, title, body))) map (_ ⇒ NoteId(id))
   }
 
   def update(noteId: String, title: Option[String], body: Option[String]): Future[Unit] =

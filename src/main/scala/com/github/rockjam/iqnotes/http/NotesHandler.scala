@@ -17,12 +17,12 @@
 package com.github.rockjam.iqnotes.http
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.StatusCode
 import akka.http.scaladsl.model.StatusCodes.{ BadRequest, NoContent, NotFound }
-import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ AuthorizationFailedRejection, Directive0, Route }
 import com.github.rockjam.iqnotes.db.{ AccessTokensCollection, NotesCollection }
-import com.github.rockjam.iqnotes.models.{ HttpError, HttpErrors, Note, NoteDataRequest }
+import com.github.rockjam.iqnotes.models._
 import de.heikoseeberger.akkahttpjson4s.Json4sSupport
 import org.json4s.{ native, DefaultFormats }
 
@@ -63,19 +63,20 @@ final class NotesHandler(implicit system: ActorSystem) extends HttpRoutes with J
         }
       } ~
       pathPrefix("note") {
-        // create new note
-        // TODO: add validation
+        // √ create new note
         put {
-          complete(StatusCodes.OK)
-//          entity(as[RequestCreateNote]) { req =>
-//
-//          }
+          entity(as[NoteDataRequest]) { req ⇒
+            onSuccess(createNote(req)) {
+              case Right(noteId) ⇒ complete(noteId)
+              case Left(err) ⇒ complete(err)
+            }
+          }
         } ~
         // get list of all notes
         // TODO: add pagination. requires some sort key in note(timestamp for example)
         get {
           parameter("page".?) { page ⇒
-            onSuccess(allNotes()) { notes ⇒
+            onSuccess(listNotes()) { notes ⇒
               complete(notes)
             }
           }
@@ -98,14 +99,26 @@ final class NotesHandler(implicit system: ActorSystem) extends HttpRoutes with J
   def tokenExists(token: String): Future[Boolean] = tokens.exists(token)
 
   // TODO: add pagination
-  def allNotes(): Future[List[Note]] = notes.findAll()
+  def listNotes(): Future[List[Note]] = notes.findAll()
+
+  def createNote(data: NoteDataRequest): Future[(StatusCode, HttpError) Either NoteId] = {
+    val optData = for {
+      title <- data.title
+      body  <- data.body
+    } yield title → body
+
+    optData map {
+      case (title, body) ⇒
+        notes.create(title, body) map Right.apply
+    } getOrElse Future.successful(Left(BadRequest → HttpErrors.BadRequest))
+  }
 
   def findNote(noteId: String): Future[(StatusCode, HttpError) Either Note] =
     notes.find(noteId) map (_.fold(notFoundError)(Right.apply))
 
   def updateNote(noteId: String,
                  data: NoteDataRequest): Future[(StatusCode, HttpError) Either Unit] =
-    // allow to update single field at one time
+    // we allow to update single field at one time
     if (data.title.isDefined || data.body.isDefined)
       notes.update(noteId, data.title, data.body) map Right.apply
     else
