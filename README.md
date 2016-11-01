@@ -1,5 +1,7 @@
 # iq-notes
 
+[![Build Status](https://travis-ci.org/rockjam/iq-notes.svg?branch=master)](https://travis-ci.org/rockjam/iq-notes)
+
 Welcome to iq-notes!
 
 # How to run
