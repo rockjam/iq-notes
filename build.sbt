@@ -1,7 +1,18 @@
+version := "0.0.1-SNAPSHOT"
+
 lazy val iqnotes = project
   .in(file("."))
   .settings(libraryDependencies ++= Dependencies.iqNotes)
-  .enablePlugins(AutomateHeaderPlugin, GitVersioning)
+  .settings(
+    defaultLinuxInstallLocation in Docker := "/var/lib/iqnotes"
+  )
+  .enablePlugins(
+    JavaServerAppPackaging,
+    DockerPlugin,
+
+    AutomateHeaderPlugin,
+    GitVersioning
+  )
 
 libraryDependencies ++= Vector(
   Library.scalaTest % "test"
