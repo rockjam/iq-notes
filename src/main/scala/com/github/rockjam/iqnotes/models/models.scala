@@ -28,7 +28,7 @@ case class NoteId(_id: String)
 
 case class User(username: String, passwordHash: String)
 
-case class AccessToken(accessToken: String) // no ready serializer for UUID
+case class AccessToken(accessToken: String)
 
 case class HttpError(error: String, message: String)
 

@@ -207,9 +207,10 @@ class NotesSpec extends SpecBase with Json4sSupport {
       responseAs[HttpError] shouldEqual HttpErrors.AuthError
     }
 
+    // check that note wasn't deleted
     Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
       response.status shouldEqual StatusCodes.OK
-      responseAs[Note]
+      responseAs[Note]._id shouldEqual noteId
     }
   }
 
@@ -224,12 +225,11 @@ class NotesSpec extends SpecBase with Json4sSupport {
     }
 
     // only title was updated
-    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
-      response.status shouldEqual StatusCodes.OK
-      val note = responseAs[Note]
-      note.title shouldEqual updateTitle.title.get
-      note.body shouldEqual defaultNoteRequest.body.get
-    }
+    checkNoteContent(
+      noteId,
+      token,
+      expectedTitle = updateTitle.title.get,
+      expectedBody = defaultNoteRequest.body.get)
 
     val updateBody = NoteDataRequest(
       None,
@@ -239,12 +239,11 @@ class NotesSpec extends SpecBase with Json4sSupport {
     }
 
     // body was updated too
-    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
-      response.status shouldEqual StatusCodes.OK
-      val note = responseAs[Note]
-      note.title shouldEqual updateTitle.title.get
-      note.body shouldEqual updateBody.body.get
-    }
+    checkNoteContent(
+      noteId,
+      token,
+      expectedTitle = updateTitle.title.get,
+      expectedBody = updateBody.body.get)
 
     val updateAll = NoteDataRequest(Some("short title"), Some("short content"))
     Post(s"/note/${noteId}?access_token=${token}", updateAll) ~> notesRoutes ~> check {
@@ -252,12 +251,11 @@ class NotesSpec extends SpecBase with Json4sSupport {
     }
 
     // title and body was updated
-    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
-      response.status shouldEqual StatusCodes.OK
-      val note = responseAs[Note]
-      note.title shouldEqual updateAll.title.get
-      note.body shouldEqual updateAll.body.get
-    }
+    checkNoteContent(
+      noteId,
+      token,
+      expectedTitle = updateAll.title.get,
+      expectedBody = updateAll.body.get)
   }
 
   def updateNoteEmpty(): Unit = {
@@ -270,6 +268,12 @@ class NotesSpec extends SpecBase with Json4sSupport {
       response.status shouldEqual StatusCodes.BadRequest
       responseAs[HttpError] shouldEqual HttpErrors.BadRequest
     }
+
+    checkNoteContent(
+      noteId,
+      token,
+      expectedTitle = defaultNoteRequest.title.get,
+      expectedBody = defaultNoteRequest.body.get)
   }
 
   def updateNoteUnauthorized(): Unit = {
