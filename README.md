@@ -21,21 +21,36 @@ Assuming that you run server on localhost, base uri will be http://localhost:300
 
 ```bash
 # To create new user with specified password:
-$ curl  -v -H "Content-Type: application/json" -XPOST -d '{ "username":"rockjam", "password":"ohmyholly" }' http://localhost:3000/api/register
+curl  -v \
+  -H "Content-Type: application/json" \
+  -XPOST \
+  -d '{ "username":"rockjam", "password":"ohmyholly" }' \
+  http://localhost:3000/api/register
 # Response: 201 Created
 
 # To get access token:
-$ curl  -v -H "Content-Type: application/json" -XPOST -d '{ "username":"rockjam", "password":"ohmyholly" }' http://localhost:3000/api/login
+curl  -v \
+ -H "Content-Type: application/json" \
+ -XPOST \
+ -d '{ "username":"rockjam", "password":"ohmyholly" }' \
+ http://localhost:3000/api/login
 # Response: {"accessToken":"262a43cb-16ba-485c-9104-e52902285c9e"}
 
 # With token obtained on previous step you can access notes API
 
 # To create new note:
-$ curl -v -H "Content-Type: application/json" -XPUT -d '{ "title": "Shopping list", "body": "Milk, eggs and candies" }' http://localhost:3000/api/note\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
+curl -v \
+  -H "Content-Type: application/json" \
+  -XPUT \
+  -d '{ "title": "Shopping list", "body": "Milk, eggs and candies" }' \
+  http://localhost:3000/api/note\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
 # Response: {"_id":"5819e5aa4e00005d00e66344"}
 
 # To list all created notes:
-$ curl -v -H "Content-Type: application/json" -XGET http://localhost:3000/api/note\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
+curl -v \
+  -H "Content-Type: application/json" \
+  -XGET \
+  http://localhost:3000/api/note\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
 # Response: [
               {
                 "_id": "5819e5aa4e00005d00e66344",
@@ -50,7 +65,10 @@ $ curl -v -H "Content-Type: application/json" -XGET http://localhost:3000/api/no
             ]
             
 # To get specific note by its id:
-$ curl -v -H "Content-Type: application/json" -XGET http://localhost:3000/api/note/5819e5aa4e00005d00e66344\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
+curl -v \
+  -H "Content-Type: application/json" \
+  -XGET \
+  http://localhost:3000/api/note/5819e5aa4e00005d00e66344\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
 # Response: {
               "_id": "5819e5aa4e00005d00e66344",
               "title": "Shopping list",
@@ -58,14 +76,19 @@ $ curl -v -H "Content-Type: application/json" -XGET http://localhost:3000/api/no
             }
 
 # To update notes content(you can update title or body, or both):
-$ curl -v -H "Content-Type: application/json" -XPOST -d '{ "body": "Milk[Done], eggs[Done], candies[Done]" }' http://localhost:3000/api/note/5819e5aa4e00005d00e66344\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
+curl -v \
+  -H "Content-Type: application/json" -XPOST \
+  -d '{ "body": "Milk[Done], eggs[Done], candies[Done]" }' \
+  http://localhost:3000/api/note/5819e5aa4e00005d00e66344\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
 # Response: 204 No Content
 
 # To delete specific note by id:
-$ curl -v -H "Content-Type: application/json" -XDELETE http://localhost:3000/api/note/5819e5aa4e00005d00e66344\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
+curl -v \
+  -H "Content-Type: application/json" \
+  -XDELETE \
+  http://localhost:3000/api/note/5819e5aa4e00005d00e66344\?access_token\=262a43cb-16ba-485c-9104-e52902285c9e
 # Response: 204 No Content
 ```
-
 
 ### License
 
