@@ -14,74 +14,38 @@
  * limitations under the License.
  */
 
-package com.github.rockjam.iqnotes.http
+package com.github.rockjam.iqnotes.logic
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.StatusCodes.Created
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, StatusCode, StatusCodes }
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.Directives._
-import akka.stream.ActorMaterializer
+import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
 import com.github.rockjam.iqnotes.db.{ AccessTokensCollection, UsersCollection }
 import com.github.rockjam.iqnotes.models._
 import com.github.rockjam.iqnotes.utils.SecurityUtils
-import de.heikoseeberger.akkahttpjson4s.Json4sSupport
-import org.json4s.{ native, DefaultFormats }
 
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
-// TODO: rename to AuthHttp
-final class AuthHandler(implicit system: ActorSystem) extends HttpRoutes with Json4sSupport {
+trait AuthLogic {
 
+  implicit val system: ActorSystem
   import system.dispatcher
 
-  implicit val serialization = native.Serialization
-  implicit val formats       = DefaultFormats
+  private lazy val users  = new UsersCollection
+  private lazy val tokens = new AccessTokensCollection
 
-  // format: off
-  def routes: Route =
-    path("login") {
-      post {
-        entity(as[AuthorizeRequest]) { auth ⇒
-          onSuccess(validateAuth(auth)) {
-            case Right(res) ⇒ complete(res)
-            case Left(err) ⇒ complete(err)
-          }
-        }
-      }
-    } ~
-    path("register") {
-      post {
-        entity(as[UserRegisterRequest]) { reg ⇒
-          onSuccess(register(reg)) {
-            case Right(res) ⇒ complete(Created → None)
-            case Left(err) ⇒ complete(err)
-          }
-        }
-      }
-    }
-  // format: on
+//  // TODO: implement logout with token deletion
+//  private def logout(): Future[Unit] = ???
 
-  // TODO: maybe move to trait AuthHandlers
-  private val users  = new UsersCollection
-  private val tokens = new AccessTokensCollection
-
-  // TODO: implement logout with token deletion
-  private def logout(): Future[Unit] = ???
-
-  private def register(reg: UserRegisterRequest): Future[(StatusCode, HttpError) Either Unit] =
+  protected def register(reg: UserRegisterRequest): Future[(StatusCode, HttpError) Either Unit] =
     for {
       exists <- users.exists(reg.username)
       user = User(reg.username, SecurityUtils.passwordHash(reg.password))
       result <- if (exists) sameUsernameError else users.create(user) map Right.apply
     } yield result
 
-  private def validateAuth(
+  protected def validateAuth(
       auth: AuthorizeRequest): Future[(StatusCode, HttpError) Either AccessToken] =
     for {
       user <- users.find(auth.username)
-      _ = println(s"=======user: ${user}")
       result <- user.fold(authError) { user ⇒
         if (SecurityUtils.isValidPassword(auth.password, user.passwordHash))
           tokens.generateAccessTokens() map Right.apply

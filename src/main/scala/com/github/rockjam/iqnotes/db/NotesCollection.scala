@@ -23,6 +23,7 @@ import reactivemongo.bson.{
   BSONDocumentReader,
   BSONDocumentWriter,
   BSONObjectID,
+  BSONString,
   Macros
 }
 
@@ -35,7 +36,7 @@ final class NotesCollection(implicit system: ActorSystem) extends Collection("no
 
   def findAll(): Future[List[Note]] =
     collection.flatMap(
-      _.find(BSONDocument.empty).cursor[Note]().collect[List](100, stopOnError = true)
+      _.find(BSONDocument.empty).cursor[Note]().collect[List](1000, stopOnError = true)
     )
 
   def find(id: String): Future[Option[Note]] =
@@ -46,8 +47,14 @@ final class NotesCollection(implicit system: ActorSystem) extends Collection("no
     collection.flatMap(_.insert(Note(id, title, body))) map (_ ⇒ NoteId(id))
   }
 
-  def update(noteId: String, title: Option[String], body: Option[String]): Future[Unit] =
-    Future.successful(())
+  def update(noteId: String, title: Option[String], body: Option[String]): Future[Unit] = {
+    val updateFields = title.map("title" → BSONString(_)) ++ body.map("body" → BSONString(_))
+    collection.flatMap(
+      _.findAndUpdate(
+        selector = BSONDocument("_id" → noteId),
+        update = BSONDocument("$set"  → BSONDocument(updateFields))
+      ) map (_ ⇒ ()))
+  }
 
   def remove(noteId: String): Future[Unit] =
     collection.flatMap(_.remove(BSONDocument("_id" → noteId))) map (_ ⇒ ())
