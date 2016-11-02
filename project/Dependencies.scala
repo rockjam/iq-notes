@@ -15,16 +15,16 @@ object Version {
 }
 
 object Library {
-  val akka          = "com.typesafe.akka" %% "akka-actor"             % Version.Akka
-  val akkaHttp      = "com.typesafe.akka" %% "akka-http-experimental" % Version.AkkaHttp
-  val akkaHttpJson  = "de.heikoseeberger" %% "akka-http-json4s"       % Version.AkkaHttpJson
-  val akkaSlf4j     = "com.typesafe.akka" %% "akka-slf4j"             % Version.Akka
-//  val json4sJackson = "org.json4s"        %% "json4s-jackson"         % Version.Json4s
-  val json4sNative  = "org.json4s"        %% "json4s-native"          % Version.Json4s
-  val reactiveMongo = "org.reactivemongo" %% "reactivemongo"          % Version.ReactiveMongo
+  val akka            = "com.typesafe.akka" %% "akka-actor"             % Version.Akka
+  val akkaHttp        = "com.typesafe.akka" %% "akka-http-experimental" % Version.AkkaHttp
+  val akkaHttpJson    = "de.heikoseeberger" %% "akka-http-json4s"       % Version.AkkaHttpJson
+  val akkaSlf4j       = "com.typesafe.akka" %% "akka-slf4j"             % Version.Akka
+  val logbackClassic  = "ch.qos.logback"    %  "logback-classic"        % "1.1.2"
+  val json4sNative    = "org.json4s"        %% "json4s-native"          % Version.Json4s
+  val reactiveMongo   = "org.reactivemongo" %% "reactivemongo"          % Version.ReactiveMongo
 
-  val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % Version.AkkaHttp
-  val scalaTest     = "org.scalatest"     %% "scalatest"              % Version.ScalaTest
+  val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit"      % Version.AkkaHttp
+  val scalaTest       = "org.scalatest"     %% "scalatest"              % Version.ScalaTest
 
 }
 
@@ -37,7 +37,7 @@ object Dependencies {
     akkaHttpJson,
     akkaSlf4j,
     json4sNative,
-//    json4sJackson,
+    logbackClassic,
     reactiveMongo,
 
     akkaHttpTestKit % "test",
