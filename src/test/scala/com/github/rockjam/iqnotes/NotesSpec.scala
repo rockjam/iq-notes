@@ -34,16 +34,32 @@ class NotesSpec extends SpecBase with Json4sSupport {
 
   behavior of "notes list"
 
-  it should "list all notes to authrized user" in listNotesAuthorized
+  it should "list all notes to authorized user" in listNotesAuthorized
+
+  it should "not allow unathorized user to list notes" in listNotesUnauthorized
+
+  behavior of "get note"
+
+  it should "return existing note to authorized user" in getNoteAuthorized
+
+  it should "respond with NotFound when note does not exist" in getNoteNotFound
+
+  it should "not allow unathorized user to get note" in getNoteUnauthorized
 
   implicit val serialization = native.Serialization
   implicit val formats       = DefaultFormats
 
-  val authRoutes  = AuthRoutes()
-  val notesRoutes = NotesRoutes()
+  private val authRoutes  = AuthRoutes()
+  private val notesRoutes = NotesRoutes()
+
+  private val defaultUserRequest = UserRegisterRequest("rockjam", "hellofapassword")
+  private val defaultNoteRequest = NoteDataRequest(
+    Some("Note title"),
+    Some("Note content, a lot of it")
+  )
 
   def createNoteAuthorized(): Unit = {
-    val token = getAuthToken(UserRegisterRequest("rockjam", "hellofapassword"))
+    val token = getAuthToken(defaultUserRequest)
     val note = NoteDataRequest(
       Some("Note title"),
       Some("Note content, a lot of it")
@@ -76,7 +92,7 @@ class NotesSpec extends SpecBase with Json4sSupport {
   }
 
   def createNoteIncomplete(): Unit = {
-    val token = getAuthToken(UserRegisterRequest("rockjam", "hellofapassword"))
+    val token = getAuthToken(defaultUserRequest)
 
     val noBody = NoteDataRequest(Some("Note title"), None)
     Put(s"/note?access_token=${token}", noBody) ~> notesRoutes ~> check {
@@ -91,7 +107,83 @@ class NotesSpec extends SpecBase with Json4sSupport {
     }
   }
 
-  private def listNotesAuthorized(): Unit = {}
+  def listNotesAuthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteIds = createNotes(5, token) map (_._id)
+
+    Get(s"/note?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val notes = responseAs[List[Note]]
+      notes map (_._id) should contain theSameElementsAs noteIds
+    }
+  }
+
+  def listNotesUnauthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteIds = createNotes(5, token) map (_._id)
+
+    // somebody tries to list notes without access token
+    Get(s"/note") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.Forbidden
+      responseAs[HttpError] shouldEqual HttpErrors.AuthError
+    }
+  }
+
+  def getNoteAuthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val note = responseAs[Note]
+      note._id shouldEqual noteId
+      note.title shouldEqual defaultNoteRequest.title.get
+      note.body shouldEqual defaultNoteRequest.body.get
+    }
+  }
+
+  def getNoteNotFound(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val nonExistingNoteId = "123"
+    Get(s"/note/${nonExistingNoteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.NotFound
+      responseAs[HttpError] shouldEqual HttpErrors.NoteNotFound
+    }
+  }
+
+  def getNoteUnauthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    // somebody tries to get note without access token
+    Get(s"/note/${noteId}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.Forbidden
+      responseAs[HttpError] shouldEqual HttpErrors.AuthError
+    }
+  }
+
+  private def createNotes(number: Int, accessToken: String): IndexedSeq[NoteId] =
+    1 to number map { i ⇒
+      createNote(
+        NoteDataRequest(
+          Some(s"note number ${i}"),
+          Some(s"Content of note number ${i}")
+        ),
+        accessToken)
+    }
+
+  private def createNote(note: NoteDataRequest, accessToken: String): NoteId =
+    Put(s"/note?access_token=${accessToken}", note) ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val noteId = responseAs[NoteId]
+      noteId._id should not be empty
+      noteId
+    }
 
   private def getAuthToken(req: UserRegisterRequest): String = {
     Post("/register", req) ~> authRoutes ~> check {

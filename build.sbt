@@ -6,6 +6,7 @@ lazy val iqnotes = project
   .settings(
     defaultLinuxInstallLocation in Docker := "/var/lib/iqnotes"
   )
+  .settings(testSettings)
   .enablePlugins(
     JavaServerAppPackaging,
     DockerPlugin,
@@ -13,6 +14,11 @@ lazy val iqnotes = project
     AutomateHeaderPlugin,
     GitVersioning
   )
+
+lazy val testSettings = Seq(
+  fork in Test := false,
+  parallelExecution in Test := false
+)
 
 initialCommands := """|import com.github.rockjam.iqnotes._
                       |""".stripMargin

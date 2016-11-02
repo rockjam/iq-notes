@@ -32,9 +32,6 @@ trait AuthLogic {
   private lazy val users  = new UsersCollection
   private lazy val tokens = new AccessTokensCollection
 
-//  // TODO: implement logout with token deletion
-//  private def logout(): Future[Unit] = ???
-
   protected def register(reg: UserRegisterRequest): Future[(StatusCode, HttpError) Either Unit] =
     for {
       exists <- users.exists(reg.username)
