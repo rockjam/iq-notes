@@ -4,18 +4,18 @@
 
 This is test assignment. It provides REST API to manage notes.
 
-# How to run
+## How to run
 
 To run server locally, without docker, execute `sbt run`. You need to have [MongoDB](https://www.mongodb.com/) installed to run server.
 
-# How to run tests
+## How to run tests
 
 You can check current build status on Circe CI. Click on badge on top of README. 
 
 To run test locally, execute `sbt test`. You need to have [MongoDB](https://www.mongodb.com/) installed to run tests.
 
 
-# Examples
+## Examples
 
 Assuming that you run server on localhost, base uri will be http://localhost:3000
 
@@ -67,6 +67,6 @@ $ curl -v -H "Content-Type: application/json" -XDELETE http://localhost:3000/api
 ```
 
 
-## License
+### License
 
 This code is open source software licensed under the [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html).
