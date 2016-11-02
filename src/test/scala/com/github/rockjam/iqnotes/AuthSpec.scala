@@ -23,7 +23,7 @@ import de.heikoseeberger.akkahttpjson4s.Json4sSupport
 import org.json4s.{ native, DefaultFormats }
 
 class AuthSpec extends SpecBase with Json4sSupport {
-  behavior of "authorization module"
+  behavior of "authorization"
 
   it should "grant access token to existing user with correct password" in grantToken()
 
