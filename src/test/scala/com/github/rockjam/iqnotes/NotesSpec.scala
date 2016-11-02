@@ -46,6 +46,20 @@ class NotesSpec extends SpecBase with Json4sSupport {
 
   it should "not allow unathorized user to get note" in getNoteUnauthorized
 
+  behavior of "delete note"
+
+  it should "allow authorized user to delete existing note" in deleteNoteAuthorized
+
+  it should "not allow unauthorized user to delete note" in deleteNoteUnauthorized
+
+  behavior of "update note"
+
+  it should "allow authorized user to update single or all fields of note" in updateNoteAuthorized
+
+  it should "not allow empty update" in updateNoteEmpty
+
+  it should "not allow unauthorized user to update note" in updateNoteUnauthorized
+
   implicit val serialization = native.Serialization
   implicit val formats       = DefaultFormats
 
@@ -60,32 +74,23 @@ class NotesSpec extends SpecBase with Json4sSupport {
 
   def createNoteAuthorized(): Unit = {
     val token = getAuthToken(defaultUserRequest)
-    val note = NoteDataRequest(
-      Some("Note title"),
-      Some("Note content, a lot of it")
-    )
 
-    Put(s"/note?access_token=${token}", note) ~> notesRoutes ~> check {
+    Put(s"/note?access_token=${token}", defaultNoteRequest) ~> notesRoutes ~> check {
       response.status shouldEqual StatusCodes.OK
       responseAs[NoteId]._id should not be empty
     }
   }
 
   def createNoteUnauthorized(): Unit = {
-    val note = NoteDataRequest(
-      Some("Note title"),
-      Some("Note content, a lot of it")
-    )
-
     // forbid when no access token
-    Put(s"/note", note) ~> notesRoutes ~> check {
+    Put(s"/note", defaultNoteRequest) ~> notesRoutes ~> check {
       response.status shouldEqual StatusCodes.Forbidden
       responseAs[HttpError] shouldEqual HttpErrors.AuthError
     }
 
     // forbid when no access token is wrong
     val wrongToken = "123"
-    Put(s"/note?access_token=${wrongToken}", note) ~> notesRoutes ~> check {
+    Put(s"/note?access_token=${wrongToken}", defaultNoteRequest) ~> notesRoutes ~> check {
       response.status shouldEqual StatusCodes.Forbidden
       responseAs[HttpError] shouldEqual HttpErrors.AuthError
     }
@@ -166,6 +171,138 @@ class NotesSpec extends SpecBase with Json4sSupport {
       responseAs[HttpError] shouldEqual HttpErrors.AuthError
     }
   }
+
+  def deleteNoteAuthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      responseAs[Note]
+    }
+
+    Delete(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.NoContent
+    }
+
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.NotFound
+      responseAs[HttpError] shouldEqual HttpErrors.NoteNotFound
+    }
+  }
+
+  def deleteNoteUnauthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      responseAs[Note]
+    }
+
+    Delete(s"/note/${noteId}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.Forbidden
+      responseAs[HttpError] shouldEqual HttpErrors.AuthError
+    }
+
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      responseAs[Note]
+    }
+  }
+
+  def updateNoteAuthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    val updateTitle = NoteDataRequest(Some("Title has a lot of meaning"), None)
+    Post(s"/note/${noteId}?access_token=${token}", updateTitle) ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.NoContent
+    }
+
+    // only title was updated
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val note = responseAs[Note]
+      note.title shouldEqual updateTitle.title.get
+      note.body shouldEqual defaultNoteRequest.body.get
+    }
+
+    val updateBody = NoteDataRequest(
+      None,
+      Some("Body should have a lot of content, and it should mean something"))
+    Post(s"/note/${noteId}?access_token=${token}", updateBody) ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.NoContent
+    }
+
+    // body was updated too
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val note = responseAs[Note]
+      note.title shouldEqual updateTitle.title.get
+      note.body shouldEqual updateBody.body.get
+    }
+
+    val updateAll = NoteDataRequest(Some("short title"), Some("short content"))
+    Post(s"/note/${noteId}?access_token=${token}", updateAll) ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.NoContent
+    }
+
+    // title and body was updated
+    Get(s"/note/${noteId}?access_token=${token}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val note = responseAs[Note]
+      note.title shouldEqual updateAll.title.get
+      note.body shouldEqual updateAll.body.get
+    }
+  }
+
+  def updateNoteEmpty(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    val updateEmpty = NoteDataRequest(None, None)
+    Post(s"/note/${noteId}?access_token=${token}", updateEmpty) ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.BadRequest
+      responseAs[HttpError] shouldEqual HttpErrors.BadRequest
+    }
+  }
+
+  def updateNoteUnauthorized(): Unit = {
+    val token = getAuthToken(defaultUserRequest)
+
+    val noteId = createNote(defaultNoteRequest, token)._id
+
+    // somebody tries to get note without access token
+    val updateEmpty = NoteDataRequest(Some("other title"), Some("other content"))
+    Post(s"/note/${noteId}", updateEmpty) ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.Forbidden
+      responseAs[HttpError] shouldEqual HttpErrors.AuthError
+    }
+
+    // check that note wasn't changed
+    checkNoteContent(
+      noteId,
+      token,
+      expectedTitle = defaultNoteRequest.title.get,
+      expectedBody = defaultNoteRequest.body.get
+    )
+  }
+
+  private def checkNoteContent(noteId: String,
+                               accessToken: String,
+                               expectedTitle: String,
+                               expectedBody: String): Unit =
+    Get(s"/note/${noteId}?access_token=${accessToken}") ~> notesRoutes ~> check {
+      response.status shouldEqual StatusCodes.OK
+      val note = responseAs[Note]
+      note.title shouldEqual expectedTitle
+      note.body shouldEqual expectedBody
+    }
 
   private def createNotes(number: Int, accessToken: String): IndexedSeq[NoteId] =
     1 to number map { i ⇒
