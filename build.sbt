@@ -14,9 +14,5 @@ lazy val iqnotes = project
     GitVersioning
   )
 
-libraryDependencies ++= Vector(
-  Library.scalaTest % "test"
-)
-
 initialCommands := """|import com.github.rockjam.iqnotes._
                       |""".stripMargin

@@ -22,7 +22,10 @@ object Library {
 //  val json4sJackson = "org.json4s"        %% "json4s-jackson"         % Version.Json4s
   val json4sNative  = "org.json4s"        %% "json4s-native"          % Version.Json4s
   val reactiveMongo = "org.reactivemongo" %% "reactivemongo"          % Version.ReactiveMongo
+
+  val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % Version.AkkaHttp
   val scalaTest     = "org.scalatest"     %% "scalatest"              % Version.ScalaTest
+
 }
 
 object Dependencies {
@@ -35,7 +38,10 @@ object Dependencies {
     akkaSlf4j,
     json4sNative,
 //    json4sJackson,
-    reactiveMongo
+    reactiveMongo,
+
+    akkaHttpTestKit % "test",
+    scalaTest % "test"
   )
 }
  
