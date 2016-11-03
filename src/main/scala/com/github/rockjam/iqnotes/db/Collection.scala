@@ -26,5 +26,5 @@ abstract class Collection(name: String)(implicit system: ActorSystem) {
 
   protected implicit val ec: ExecutionContext = mongoExt.executor
 
-  protected val collection: Future[BSONCollection] = mongoExt.collection(name)
+  protected def collection: Future[BSONCollection] = mongoExt.collection(name)
 }

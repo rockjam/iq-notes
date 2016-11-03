@@ -35,7 +35,7 @@ final class MongoExtensionImpl(system: ActorSystem) extends Extension {
   private val driver = MongoDriver()
   private val conn   = Future.fromTry(driver.connection(config.mongoUri))
 
-  val db: Future[DefaultDB] = conn flatMap (_.database(config.dbName))
+  def db: Future[DefaultDB] = conn flatMap (_.database(config.dbName))
 
   def collection(name: String): Future[BSONCollection] = db.map(_.collection(name))
 }
